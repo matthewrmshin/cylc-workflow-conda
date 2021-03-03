@@ -1,0 +1,37 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+# Copyright (C) British Crown (Met Office) & Contributors.
+#------------------------------------------------------------------------------
+# Note: "conda" does not work with "set -u"
+set -eo pipefail
+SUITE_CONDA_ENV="$1"
+
+# Gain access to the "conda" command.
+. "${USER_CONDA_PROFILE:-${HOME}/miniconda3/etc/profile.d/conda.sh}"
+
+# Create or update Conda environment. Activate it.
+if conda activate --stack "${SUITE_CONDA_ENV}" 1>'/dev/null' 2>&1; then
+    conda env update \
+        --prune \
+        -p "${SUITE_CONDA_ENV}" \
+        -f "${CYLC_SUITE_RUN_DIR}/environment.yml"
+    pip uninstall -y 'hello' || true
+else
+    mkdir -p "$(dirname "${SUITE_CONDA_ENV}")"
+    conda env create \
+        --force \
+        -p "${SUITE_CONDA_ENV}" \
+        -f "${CYLC_SUITE_RUN_DIR}/environment.yml"
+    conda activate --stack "${SUITE_CONDA_ENV}"
+fi
+set -u
+
+# Install any other dependencies here if necessary
+# ...
+
+# Install project to Conda environment
+pushd "${CYLC_SUITE_RUN_DIR}"
+python3 './setup.py' 'install'
+popd
+
+exit

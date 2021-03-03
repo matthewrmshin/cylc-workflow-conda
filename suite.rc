@@ -1,0 +1,47 @@
+#!Jinja2
+[cylc]
+    cycle point time zone = Z
+    [[parameters]]
+        world = Earth, Venus, Mars
+
+[scheduling]
+    cycling mode = integer
+    initial cycle point = 1
+    [[dependencies]]
+        [[[R1]]]
+            graph = """
+                install_condaenv => hello<world>
+            """
+
+[runtime]
+    [[root]]
+        script = echo "${CYLC_TASK_NAME}: to be implemented."
+        [[[environment]]]
+            SUITE_CONDA_ENV=${CYLC_SUITE_SHARE_DIR}/opt/condaenv
+            USER_CONDA_PROFILE=${HOME}/miniconda3/etc/profile.d/conda.sh
+        [[[job]]]
+            batch system = slurm
+        [[[events]]]
+            mail events = submission failed, failed, warning
+    [[install_condaenv]]
+        script = install-condaenv "${SUITE_CONDA_ENV}"
+        [[[directives]]]
+            --mem=2G
+        [[[job]]]
+            execution time limit = PT10M
+    [[CONDA]]
+        pre-script = """
+            set +u
+            . "${USER_CONDA_PROFILE}"
+            conda activate --stack "${SUITE_CONDA_ENV}"
+            set -u
+        """
+    [[hello<world>]]
+        inherit = None, CONDA
+        script = """
+            hello "${HELLO_WORLD}"
+        """
+        [[[job]]]
+            execution time limit = PT1M
+        [[[environment]]]
+            HELLO_WORLD = %(world)s
